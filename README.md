@@ -3,26 +3,33 @@
 <br />
 <h2>Utilities Used</h2>
 
-- <b>Windows 10 Operating System</b>
 - <b>Kali Linux</b>
-- <b>Browser (e.g., Google Chrome and Firefox)</b>
-- <b>Gophish Phishing Framework</b>
+- <b>Volatility Memory Analysis Tool</b>
 
 <h2>Environments Used</h2>
 
 - <b>VirtualBox Hypervisor </b>
 
 <h2>Lab Walk-through:</h2>
-<p>This demonstration will hit two birds with one stone. We’ll set up a phishing campaign with the <a href="https://docs.getgophish.com/user-guide/what-is-gophish" target="_blank">Gophish</a> framework where we’ll identify a victim user group, fabricate phishing emails, and launch a campaign that is configured all in one platform. Another element to this social engineering attack will be the credential harvesting tool that will clone a popular website and will act as the payload in our phishing campaign. </p>
+<p>This demonstration includes the Volatility command-line tool that will allow me to pull usefull information out of the memory image file of an infected machine that I have for my analysis. I will be looking for simple information such as the operating system of the machine where this memory file came from, how much RAM is included in the analysis, what are the running processes, any user accounts, passwords, and files associated with abnormal activity.</p>
 <br />
-<h3>Initialize the Phishing Campaign</h3>
-It's best to do this lab in an isolated environment. I have my Windows 10 VM and Kali Linux VM powered on. Both machines are in the same subnet, which is essential for this demonstration to execute properly. Let’s pull up to the Windows 10 VM. Make sure your Windows Firewall is turned off so there’s no interference for the social engineering attack.
-<br/>
-<img src="https://i.imgur.com/fQV0cA1.png" height="40%" width="40%" alt="Windows Firewall Turned Off"/>
+<h3>Volatility</h3>
+Volatility is a very useful memory analysis tool for many who practice IR, forensics, and cybersecurity. The 
+command-line tool written in Python is a huge cohesive framework made up of powerful plugins that 
+enable users to find so much information from memory images such as information about the system, 
+network connections, processes running on the images, and even the ability to extract the raw memory 
+dumps for further analysis or revere engineering certain malware found.
+
+
 <br />
-Next, we'll boot up our hMailServer that was created in another <a href="https://github.com/JE99s/Create_Your_Local_EmailServer" target="_blank">demonstration</a>.
+<h3>Gaining Some Information</h3>
+I just logged in to my Kali Linux virtual machine with the Volatility memory forensics tool already installed. I open a terminal to locate the Volatility Python script by executing <b><i>locate volatility.py</i></b>
 <br/>
-<img src="https://i.imgur.com/lE1mdzi.png" height="60%" width="60%" alt="Please enter hMailServer passwd"/>
+<img src="https://i.imgur.com/ZynlVaO.png" height="70%" width="60%" alt="Volatility Framework Program Location"/>
+<br />
+I use the <b>imageinfo</b> plugin to gather information about the memory image
+<br/>
+<img src="https://i.imgur.com/pLsVc27.png" height="95%" width="85%" alt="Memory img info"/>
 <br />
 Next, we’ll start up our Gophish Server.
 <br/>

@@ -1,4 +1,4 @@
-# Threat Hunting in Memory with Volatility
+# Hunting in Memory with Volatility
 
 <br />
 <h2>Utilities Used</h2>

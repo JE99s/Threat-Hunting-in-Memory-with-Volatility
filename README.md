@@ -31,116 +31,87 @@ I use the <b>imageinfo</b> plugin to gather information about the memory image
 <br/>
 <img src="https://i.imgur.com/pLsVc27.png" height="95%" width="85%" alt="Memory img info"/>
 <br />
-Next, we’ll start up our Gophish Server.
+Here we have some information about the image used, including the suggested operating system and 
+image type, the number of processors used, and the date and time of the memory image. It’s useful 
+information. From “AS Layer1:”, IA32 Page memory indicates that the machine it was a part of was a 32-bit 
+system which means that no more than 4GB of RAM is included in this analysis. Now I know that I’m 
+working with an image from a 32-bit architecture Windows XP with a service pack 0. I notice the suggested 
+profiles WinXPSP2x86 (Windows XP Service Pack 2x86), and WinXPSP3x86 (Windows XP Service Pack 3x86) 
+but the image type section tells me that the service pack is 0 so I’m not sure which of the profiles will be 
+the appropriate one to choose. I will be sticking with the WinXPSP2x86 profile for the analysis. The version 
+operating system of the memory image is Windows NT displayed by the plugin command <b><i>verinfo</i></b>.
 <br/>
-<img src="https://i.imgur.com/s44TwHe.png" height="40%" width="40%" alt="Mouse on gophish.exe"/>
+I've had no luck finding user account names and passwords besides the user Daniel Faraday. Every time I attempt the <b><i>hivelist</i></b> plugin command for Volatility there are no memory addresses or corresponding names to be shown.
 <br />
-The configured Gophish executable is locally assigned. The admin dashboard is where we will be doing our work. So, on any browser. We’ll type the following URL to navigate to the Gophish admin login page.
-<br/>
-<img src="https://i.imgur.com/OlpWN4G.png" height="60%" width="60%" alt="URL to Gophish admin server"/>
-<br />
-At the login page, we’ll submit our credentials to log in to the admin dashboard.
-<br/>
-<img src="https://i.imgur.com/ohFw8Hr.png" height="35%" width="35%" alt="Gophish Admin sign-in page"/>
+<img src="https://i.imgur.com/w6WWqDQ.png" height="90%" width="90%" alt="No profile or accounts shown with hivelist"/>
 <br />
 
-<h3>Users & Groups</h3>
-On the left-side panel of the admin dashboard, we'll click the <b>Users & Groups</b> tab to establish our victim(s) for the phishing campaign. This is where we'll assign our targets for the phishing campaign to a group that could contain more than one email address, so a phishing campaign can be sent in mass. So, we'll click <b>New Group</b> to fill in the following fields:
+<h3>Process Analysis</h3>
+I'm going to use the Volatility plugin command <b>pslist</b> to show a list of all running processes on the memory file.  It gives important information like the Process ID (PID), and the Parent PID (PPID), and even shows 
+the time when a process started. I execute the <b>pslist</b> plugin to get the list of processes. Looking at them listed (e.g., <i>services.exe</i> and <i>explorer.exe</i>) they are booted first and then followed by <i>inetinfo.exe</i>, <i>hxdef100.exe</i>, and <i>poisonivy.exe</i>.
 <br/>
-<img src="https://i.imgur.com/d2uXBjp.png" height="80%" width="80%" alt="New Group Fields"/>
+<img src="https://i.imgur.com/B0HG3Qd.png" height="85%" width="85%" alt="PSLIST Plugin Command"/>
 <br />
-We'll choose anything for the group name, and here we'll add some recipients. These valid email addresses created locally with help from our <a href="https://github.com/JE99s/Create_Your_Local_EmailServer" target="_blank">hMailServer</a>. Once all recipients are added, click <b>Save Changes</b>.
+When looking at this it’s important to know that 
+the PID identifies a process and the PPID identifies the parent of the process, the one before. I can see that 
+services.exe has a PID of 732. An abnormal number of processes are starting simultaneously and have a 
+PPID of <i>services.exe</i>.
 
 <br/>
-<img src="https://i.imgur.com/6iAX7e2.png" height="75%" width="75%" alt="Save Changes to Group"/>
+<img src="https://i.imgur.com/nHp1hNg.png" height="85%" width="85%" alt="732 PPID"/>
 <br />
 
-<h3>Sending Profiles</h3>
-To send emails, Gophish requires us to configure some SMTP relay details called "Sending Profiles". On the left-hand sidebar of the dashboard, click <b>Sending Profiles</b>. During this configuration, it's important that the "SMTP From" address is a valid email address. We'll fill in the following fields as such and save our profile.
+I can see that it's a similar situation for _explorer.exe_ which is the PPID of the following amount of processes. There are so many instances where _services.exe_ and _explorer.exe_ are PPIDs.
+<br />
+Now **pstree** is another plugin that can identify and list processes. The plugin outputs the same list of processes as the **pslist** command would but identifies and formats the processes in a manner which displays one child process related to a parent process in ordinal fashion. Here, we have _explorer.exe_ and the processes listed under are indented, implying that _explorer.exe_ is the parent process of those child processes. This is a first step toward getting an idea of what’s going on with this memory image.
 <br/>
-<img src="https://i.imgur.com/zwMyhNU.png" height="45%" width="45%" alt="Sending Profile"/>
-<br />
-Ok, so we now have our Gophish server up and running. We’ve made a group of target recipients and we’ve established a Sending Profile that will launch the phishing campaign. Before we proceed, let’s go to our Kali Linux VM to setup the Credential Harvester tool. 
-<br/>
-
-<h3>Utilize the SET Toolkit to Create Malicious Link</h3>
-Starting on our Kali Linux VM, let’s ensure connectivity with the Windows 10 VM. 
-<br/>
-<img src="https://i.imgur.com/5tGoJx5.png" height="75%" width="75%" alt="Kali ping to Windows 10"/>
-<br />
-<img src="https://i.imgur.com/Yh8LgQW.png" height="75%" width="75%" alt="Windows 10 ping to Kali"/>
-<br />
-It looks like there is connectivity between the two machines. Now, the credential harvester one of many available tools included in the massive framework called the Social Engineering Toolkit (a.k.a. SET). To start up the SET, we need super user rights to execute its boot command, that is what ‘sudo’ is for. Execute the following command, then press <b>Enter</b>.
-<br />
-<img src="https://i.imgur.com/0TxS0o3.png" height="75%" width="75%" alt="sudo setoolkit"/>
-<br />
-For your first time, you might be met with somewhat of a terms of service (TOS) to agree that this tool will not be used for any malicious or unethical reasons. You’re not going to go out in the real-world and utilize this to attempt to steal someone’s credentials. This is all designed for demonstrative purposes only. Agree and hit <b>Enter</b> and you should be met with the following menu:
-<br />
-<img src="https://i.imgur.com/v6VNBVZ.png" height="55%" width="55%" alt="SET MENU Welcome-page"/>
-Now, we are going to be running a social engineering attack, so the first thing we are going to select is option <b>1</b> for <b>Social-Engineering Attacks</b>. Hit <b>Enter</b>. Now, we are met with another menu to choose a specific attack vector. Notice that option <b>2</b> says <b>Website Attack Vectors</b>. Remember, we will be generating a fake website. So, we'll choose option <b>2</b>. Hit <b>Enter</b>.
-<br />
-<img src="https://i.imgur.com/gU2wQyz.png" height="55%" width="55%" alt="Website Attack Vectors"/>
-<br />
-Another menu pops up! Here are some attacks that SET has within a web browser. There is a Metasploit attack, a Tabnabbing one, and a Web Jacking one. We're going to choose option <b>3</b>, <b>Credential Harvester Attack Method</b>. Type <b>3</b> and then hit <b>Enter</b>.
-<br />
-<img src="https://i.imgur.com/SMHprj8.png" height="55%" width="55%" alt="Credential Harvester"/>
-<br />
-We could clone websites. We can even create our own malicious website. For a quick demonstration, we'll choose option <b>1</b>, where there are templates already provided.
-<br />
-<img src="https://i.imgur.com/z6Rs54N.png" height="65%" width="65%" alt="Web Templates"/>
-<br />
-Here the tool will be asking for an IP address to send these captured credentials back to. Since we are keeping this local, we'll keep the IP address that is already provided (highlighted in white), sending it to the Kali Linux machine. We'll make sure to keep the IP address recorded for when we start setting up our phishing campaign.
-<br />
-<img src="https://i.imgur.com/JCpS1w2.png" height="60%" width="60%" alt="IP address for the POST"/>
-<br />
-Finally, we are going to create a fake Google login page. At the option menu, type in <b>2</b> and hit <b>Enter</b> to configure a fake Google login page.
-<br />
-<img src="https://i.imgur.com/u8G7NQA.png" height="60%" width="60%" alt="Select Google Template"/>
-<br />
-<br />
-<img src="https://i.imgur.com/kvcqxJU.png" height="80%" width="80%" alt="google website cloned"/>
-<br />
-<h3>Send Out Da Phishing Campaign</h3>
-<h4>Email Template</h4>
-Now that we have a malicious website. We'll jump back to the Gophish admin dashboard on the Windows 10 VM. On the left-hand sidebar, we'll click the <b>Email Templates</b> tab to create our malicious email. This is a critical part of the phishing campaign. This element has a lot to do with what the victim will see once they receive the phishing email. Let's get started by naming this new email template. Provide an Envelope sender, this can virtually be any email. I made up the email address inside <b>Employee Sender</b> field; just to make it look like it's coming from someone affiliated with Google. Since we are planning to send a malicious Google sign-in URL to the victim. Then, we'll proceed to finish up this email template by providing a subject for the email message and creating the content of the email. Notice that I'm on the HTML sub-tab when working on the contents of the email.
-<br />
-<img src="https://i.imgur.com/zrJMS29.png" height="80%" width="80%" alt="Email Template"/>
-<br />
-Within the message, we'll embed the link containing the IP address of the Kali Linux VM, the address to where the captured credentials will be sent to. We want to ensure that the victim will open that malicious URL. The reason we use 'http' instead of 'https' is because the credential harvester (malicious URL) is running on port 80 (refers to HTTP). Once we finish the rest of the email message, click <b>Save Template</b>.
-<br />
-<img src="https://i.imgur.com/QBx7tjO.png" height="80%" width="80%" alt="href...and then save"/>
+<img src="https://i.imgur.com/9Kyn7IW.png" height="85%" width="85%" alt="Pstree Output for Explorer.exe and Child Processes"/>
 <br />
 
-<h4>Landing Pages</h4>
-The <b>Landing Pages</b> tab will help the phishing campaign redirect users to another website after they submit their credentials. Landing pages are the actual HTML pages that are returned to the users (victims) when they click the phishing links they receive. Hence, we can import the IP address of our Kali Linux VM to ensure that the victim is redirected to the malicious URL to submit their credentials.
+I can also use the **psscan** Volatility plugin to check for inactive and even hidden processes. I execute the **psscan** plugin and the following outputs:
+<br/>
+<img src="https://i.imgur.com/uJttcbv.png" height="95%" width="95%" alt="psscan attempt"/>
 <br />
-<img src="https://i.imgur.com/1H0gNUO.png" height="75%" width="75%" alt="Landing Page configuration"/>
+
+Compared to the results from **pslist**, one can assume some abnormalities, but I don't want to conclude anything yet with the little information that I have. Another way to find and list hidden processes is by utilizing the **psxview** Volatility plugin command. Here, I see that **psxview** essentially performs both the **pslist** and **psscan** and even determines whether they are hidden from those respective scans. This explains why there was no output from my **psscan** earlier. All processes are shown as True for **pslist** but False for **psscan** which makes me suspicious.
+<br/>
+<img src="https://i.imgur.com/jnr8cZg.png" height="95%" width="95%" alt="PSXVIEW PLUGIN CMD ON VOLATILITY"/>
 <br />
-Next, we'll navigate to the <b>Campaigns</b> tab and click the <b>New Campaign</b> button.
+
+<h3>Possible Network Connections</h3>
+The Volatility tool has the ability to analyze active, terminated, and hidden connections with their corresponding processes from three important plugin commands: <b>connections</b>, <b>connscan</b>, and <b>sockets</b>.
 <br />
-<img src="https://i.imgur.com/XTJ7zAC.png" height="70%" width="70%" alt="New Campaign"/>
+The <b>connections</b> plugin command lists active connections at the time of the memory image. It also displays local and remote IP addresses with their respective ports and PIDs. The <b>connections</b> command can be used for Windows XP. I execute the <b>connections</b> plugin command and the following displays:
+<br/>
+<img src="https://i.imgur.com/zuhTCkg.png" height="95%" width="95%" alt="CONNECTIONS PLUGIN CMD ATTEMPT"/>
 <br />
-We'll provide a name for this campaign. Any name you come up with is fine. Then, we'll select an email template. Here, I will select the one we worked on earlier.
+I see that there are no active listed connections when using the <b>connections</b> command. I will try the <b>sockets</b> plugin command next. I execute the sockets plugin command and have no luck either in finding connections.
+<br/>
+<img src="https://i.imgur.com/9dX1Hhl.png" height="95%" width="95%" alt="SOCKETS PLUGIN CMD ATTEMPT"/>
 <br />
-<img src="https://i.imgur.com/qOt7SJr.png" height="45%" width="45%" alt="Select Email Template"/>
+
+Now, to see a list of connections that have been ended or terminated, I can use the **connscan** plugin command. This command is also used for Windows XP systems. I execute the **connscan** command. Here, I see the ports of the systems loopback address are cross-connected using ports 1031 and 6667. The PID of 1728 belongs to _iroffer.exe_, and the PID of 1480 belongs to _bircd.exe_. However, what catches my attention is the last recorded connection. 
+<br/>
+<img src="https://i.imgur.com/XkH2TQs.png" height="85%" width="85%" alt="CONNSCAN ON MEMORY IMG"/>
 <br />
-Then we'll select the Landing Page we reviewed earlier.
+The remote address is a clearly different subnet, with a TCP port of 3460. The 480 PID corresponds to <i>poisonivy.exe</i>. This is an abnormal finding. I want to investigate this process, but I will continue to gain more information first.
 <br />
-<img src="https://i.imgur.com/NhUr8HW.png" height="45%" width="45%" alt="Select Landing Page"/>
+
+<h3>Analyzing DLLs</h3>
+Dynamic-Link Libraries (.dll or DLLs) are modules that contain functions (code) and data that can be used 
+by either another DLL or a program and have the ability to be used simultaneously by different data 
+structures. Inspecting the DLLs of processes can greatly assist in connecting processes and their correlation 
+with other programs. I will be using the <b>dlllist</b> plugin command for Volatility to print a list of all running 
+DLLs for each process. I will use this plugin command specifically on poisonivy.exe. To print DLLs that are 
+respective to a specific process, I use the -p flag and provide the PID of that process after the <b>dlllist</b> command.
+Here, <i>poisonivy.exe</i> has quite a few DLLs, one of them being <b>kernel32.dll</b>. This kind of process being in system files is alarming to me.
+<br/>
+<img src="https://i.imgur.com/jVbr5Fp.png" height="85%" width="85%" alt="DLLLIST FOR POISONIVY.EXE PROCESS"/>
 <br />
-Then the URL...
-<br />
-<img src="https://i.imgur.com/I2dXAVZ.png" height="25%" width="25%" alt="Either IP is fine"/>
-<br />
-Honestly, you can put your Kali's IP address or your local IP address for the URL, the credential harvester should still function the same with either or.
-<br />
-Then, we'll select our Sending Profile. Once all configurations are selected, click <b>Launch Campaign</b> to send it off.
-<br />
-<img src="https://i.imgur.com/XG6cHhz.png" height="75%" width="75%" alt="Launch campaign"/>
-<br />
-<img src="https://i.imgur.com/JRAgKZ2.png" height="40%" width="40%" alt="Campaign Scheduled!"/>
-<br />
-<h3>Harvest Credentials On Attack Machine</h3>
+
+
+<h3>Malware Analysis</h3>
+<h4>Poisonivy.exe</h4>
 Now, we'll go check the sample victim emails we launched the campaign toward and it looks like the phishing emails were received!
 <br />
 <img src="https://i.imgur.com/AGCzKU3.png" height="60%" width="60%" alt="email inbox"/>

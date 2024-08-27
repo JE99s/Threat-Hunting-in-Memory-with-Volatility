@@ -209,9 +209,8 @@ Windows XP system.
 This provides more malicious activities such as the opportunity to create new passwords for accounts, lock 
 users out of their own system, and leave critical damage to a machine.
 <br />
-This lab has led to many different locations inside the virtual machines that I didn’t know existed before 
-attempting it. Firstly, I’m grateful for that. I utilize a majorly popular memory analysis tool to scan, connect, 
-identify, and create a story on the running processes from this memory image. The compromised machine 
+Throughout this demonstration, I utilized a commonly used memory analysis tool to scan, connect, 
+identify, and confer on the running processes from this memory image. The compromised machine 
 did indeed have malicious activity going on. I found a backdoor with root-like (superuser) privileges that 
 took advantage of the machine to gain access to Windows XP.
 

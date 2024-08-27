@@ -210,6 +210,7 @@ Windows XP system.
 This provides more malicious activities such as the opportunity to create new passwords for accounts, lock 
 users out of their own system, and leave critical damage to a machine.
 <br />
+<br />
 Throughout this demonstration, I utilized a commonly used memory analysis tool to scan, connect, 
 identify, and confer on the running processes from this memory image. The compromised machine 
 did indeed have malicious activity going on. I found a backdoor with root-like (superuser) privileges that 

@@ -112,19 +112,45 @@ Here, <i>poisonivy.exe</i> has quite a few DLLs, one of them being <b>kernel32.d
 
 <h3>Malware Analysis</h3>
 <h4>Poisonivy.exe</h4>
-Now, we'll go check the sample victim emails we launched the campaign toward and it looks like the phishing emails were received!
+To confirm that this process is a malicious program I will be getting the hash of the <i>poisonivy.exe</i> file. Before that, I will need to dump the memory addresses of the executable to the disk of my Kali Linux box. The Volatility Framework tool has a plugin called <b>procdump</b> that allows me to dump the memory of the process to essentially recreate it on my disk for further analysis. I execute the <b>procdump</b> plugin command and it produces a <i>.exe</i> file named <i>executable.480.exe</i> in the current directory I'm in. Next, I get the MD5 hash by executing <b><i>md5sum executable.480.exe</i></b> to get the MD5 hash from the file. I have VirusTotal opened, I enter the hash and commence the scan.
 <br />
-<img src="https://i.imgur.com/AGCzKU3.png" height="60%" width="60%" alt="email inbox"/>
+Here, I see that 66 out of 72 security vendors have flagged this file as malicious from the scan. This most likely some type of malware.
+<br/>
+<img src="https://i.imgur.com/wDzHOv2.png" height="85%" width="85%" alt="VIRUSTOTAL SCAN OF POISONIVY.EXE"/>
 <br />
-<img src="https://i.imgur.com/d6szVNU.png" height="70%" width="70%" alt="Contents of email"/>
+
+I look to the <a href="https://attack.mitre.org/" target="_blank">MITRE ATT&CK</a> framework and search for the threat. This is indeed called <i>Poisonivy</i>, a remote administration tool (RAT) that acts as a backdoor to a compromised system. We're able to see this malware because it's memory resident. It's a known threat to Windows 2000, Windows XP, and Windows Server 2003 platforms. This malicious toolkit has been around for a while. There are variants of this malware that can be configured to any or all of the following:
+
+- Capture screen, audio, and webcam 
+- List active ports 
+- Log keystrokes 
+- Manage open windows 
+- Manage passwords 
+- Manage registry, processes, services, devices, and installed applications 
+- Perform multiple simultaneous transfers 
+- Perform remote shell 
+- Relay server 
+- Search files 
+- Share servers 
+- Update, restart, terminate itself
+
+Most versions of Poisonivy can copy itself into other files, like system files by forking itself into alternate data streams, avoiding detection. I believe the VirusTotal scan seals the deal in identifying that there is or 
+was malicious activity happening on this memory image. It says on VirusTotal that one of its imports is 
+kernel32.dll to use as an exit process. We know that kernel32.dll is in fact a running DLL for <i>poisonivy.exe</i> from the DLL analysis earlier. I'm going to utilize the <b>malfind</b> Volatility command to find any hidden and injected code associated with <i>poisonivy.exe</i>. Here, there is inject code shown through the memory addresses in the output, "Hacker.Defender" and ".kernel32.dll. I think these files or codes have been injected by <i>poisonivy.exe</i>
 <br />
-Above, we can see the email template we created earlier with Gophish.
-**A quick note**
-In the real world, it's vital to examine every detail in suspicious emails. Big indicators of phishing emails are the grammatic errors. Despite the shady sense of authority from the message, the misspelling and improper email format is usually a dead giveaway, telling most that this email is a phishing attempt. 
+<img src="https://i.imgur.com/KKJzePt.png" height="75%" width="75%" alt="MALFIND VOLATILITY COMMAND ON POISONIVY.EXE PROCESS"/>
 <br />
-<img src="https://i.imgur.com/FJpR1cQ.png" height="75%" width="75%" alt="Phishing indicators"/>
+
+It is common for malware to hide in plain sight. A virus won't be located on the <b>Desktop</b> folder, but malware commonly replaces certain system files located in the <b>system32</b> folder or outside of it. Malware likes to pose as legitimate Windows processes, which enable them to keep hidden and perform actions like keylogging, transferring more malicious files, spreading viruses, and more. I want to check some necessary processes that could possibly be holding malware, enabling the malware, or even the malware itself. The malicious poisonivy.exe has copied itself in to the machine's WINDOWS\system32 folder.
+
 <br />
-We’ll proceed by clicking the hyperlink in the email message, and we’re immediately redirected to a google page. But the URL looks different. It has the IP address of my Kali Linux VM inside the URL tab, which would not normally look right, but this is a good indication that the victim has been successfully redirected to credential harvester URL. I go back to my Kali Linux VM, and the feed shows the activity of the Windows 10 VM connecting to the malicious URL.
+<img src="https://i.imgur.com/dsVvchI.png" height="90%" width="90%" alt="VOLATILITY FILESCAN & GREP 4 POISONIVY.EXE COMMAND"/>
+<br />
+I did a similar method in getting the hash of the kernel32.dll file. I used the <b>dlldump</b> plugin command for Volatility to recreate the DLL from the memory image.
+<br />
+<img src="https://i.imgur.com/6r03Qsv.png" height="95%" width="95%" alt="DLLDUMP CMD"/>
+<br />
+Once it was generated after executing the <b>dlldump</b> plugin command for Volatility, I got the MD5 hash
 <br />
 <img src="https://i.imgur.com/HtoxulG.png" height="75%" width="75%" alt="Credential Harvester feed"/>
 <br />

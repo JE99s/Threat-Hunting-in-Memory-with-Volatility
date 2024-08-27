@@ -150,19 +150,123 @@ I did a similar method in getting the hash of the kernel32.dll file. I used the 
 <br />
 <img src="https://i.imgur.com/6r03Qsv.png" height="95%" width="95%" alt="DLLDUMP CMD"/>
 <br />
-Once it was generated after executing the <b>dlldump</b> plugin command for Volatility, I got the MD5 hash
+Once it was generated after executing the <b>dlldump</b> plugin command for Volatility, I got the MD5 hash and copied it to VirusTotal.
 <br />
-<img src="https://i.imgur.com/HtoxulG.png" height="75%" width="75%" alt="Credential Harvester feed"/>
+<img src="https://i.imgur.com/4Q4ZmJ4.png" height="85%" width="85%" alt="CMDLINE MD5 HASH OF DLL HASH"/>
 <br />
-So, on the Windows 10 VM, let’s try logging in as the victim who fell for the phishing email. To check our Google account, the victim will input some credentials to log in.
 <br />
-<img src="https://i.imgur.com/fUQEbez.png" height="80%" width="80%" alt="Sign in to Google..."/>
+<img src="https://i.imgur.com/1F3ik4D.png" height="95%" width="95%" alt="VIRUSTOTAL FEED"/>
 <br />
-Once we click <b>Sign in</b>, we'll navigate back to our Kali machine, we should see what the SET credential harvester tool has captured in real-time, and it turns out that we have captured something!
+<h3>More Findings & Conclusion</h3>
+I was curious about <i>services.exe</i> and found that it had an injection as well through the <b>malfind</b> Volatility plugin command.
 <br />
-<img src="https://i.imgur.com/3K3FwM6.png" height="85%" width="85%" alt="Captured Credentials"/>
+<img src="https://i.imgur.com/ymUuGhW.png" height="80%" width="80%" alt="VOLATILITY MALFIND CMD"/>
 <br />
-Success! The feed shows the exact same credentials that we just put in as the victim on the Windows 10 VM. We have successfully captured a victim’s credentials through first creating a phishing email and then utilizing the Social Engineering Toolkit as the payload to capture the credentials that the victim would provide. One cool feature of the Credential Harvesting tool is that once a victims’ credentials are captured, the malicious site refreshes and is immediately replaced with the actual site it cloned. Hence, the victim would be directed to the actual Google website after submitting their credentials.
+I performed a <b>procdump</b> on the process and grabbed its hash. I put the hash in the VirusTotal and the scan showed that there were four flags on it.
 <br />
-<img src="https://i.imgur.com/8hG24Zb.png" height="80%" width="80%" alt="Back to regular Google"/>
+<img src="https://i.imgur.com/wOyRU1H.png" height="85%" width="85%" alt="VIRUSTOTAL SCAN OF SERVICES.EXE HASH"/>
 <br />
+I looked more into <i>hxdef100.exe</i> which is short for "Hacker Defender". This process is started by <i>services.exe</i> and <i>hxdef100.exe</i> is the PPID of other processes as well.
+<br />
+<img src="https://i.imgur.com/bE0zvB9.png" height="80%" width="80%" alt="PSTREE CMD TOWARD SERVICES.EXE AND HXDEF100.EXE"/>
+<br />
+I execute the <b>filescan</b> Volatility command to find any files associated with <i>hxdef100.exe</i>. The executable is in its own created directory labeled as a rootkit.
+<br />
+<img src="https://i.imgur.com/8ZAy85W.png" height="90%" width="90%" alt="HXDEFROOTKIT"/>
+<br />
+To confirm that <i>hxdef100.exe</i> is malicious or not, I do the same process of performing a <b>procdump</b> of the process to create an executable from memory, and then get the MD5 hash from the executable file so I can put that in VirusTotal.
+<br />
+<img src="https://i.imgur.com/sRc6qWH.png" height="90%" width="90%" alt="PROCDUMP ON HXDEF100.EXE"/>
+<br />
+Here, the VirusTotal scan shows me that 60 security vendors have flagged this file as malicious. This threat is labeled as a backdoor trojan.
+<br />
+<img src="https://i.imgur.com/zJ13Vpe.png" height="90%" width="90%" alt="VIRUSTOTAL SCAN OF HXDEF100.EXE HASH"/>
+<br />
+I've come to reveal some major findings throughout the lab. Here is my hypothesis as to how this machine was compromised:
+<br />
+The Poison Ivy malware (poisonivy.exe) was emitted into the machine via the Windows Explorer browser 
+on through an FTP port, maybe port 3460 (from the <b>connscan</b> earlier) most likely through a TCP-enabled transfer file service. Somehow a malicious file containing <i>poisonivy.exe</i> was transferred into the victim's Windows XP instance and then the payload was delivered. Poisonivy could have created a run key Registry pointing to a malicious executable such as <i>hxdef100.exe</i> once it was dropped to disk. Then it executed inside the affected machine, it copies itself as critical files like <i>svchost.exe</i> to stay hidden.
+<br />
+This enables the download and installation of <i>hxdef100.exe</i> to create a backdoor in the background between different processes in the Windows XP machine or ports (via open ports found in an Nmap scan).
+<br />
+Hacker Defender or <i>hxdef100.exe</i> is a rootkit that can configure itself to connect to hidden ports on a system via netcat. It can set itself to run when the victim system boots and the file mapping name can be set when it's injected into system files. Utilizing the strings function on Kali, I found the settings section for the <i>hxdef100.exe</i> build and there are some major similarities between that and the <b>malfind</b> Volatility plugin command for PID 480.
+<br />
+<img src="https://i.imgur.com/dYEHjRv.png" height="90%" width="90%" alt="STRINGS CMD ON KALI FOR HXDEF100"/>
+<br />
+Here, I found some more configurations possibly done by the hacker showing that <i>hxdef100.exe</i> is 
+set as a backdoor shell.
+<br />
+<img src="https://i.imgur.com/hjzE0KI.png" height="90%" width="90%" alt="STRINGS CMD ON KALI FOR HXDEF100"/>
+<br />
+It spread itself to replace or inject itself into essential Windows processes. Then <i>hxdef100.exe</i> can inject 
+itself into batch files and other processes via Alternate Data Stream. Once a backdoor is created, the 
+hacker was able to connect back to the Windows XP machine via port forwarding through a listed open 
+port utilizing netcat or <i>nc.exe</i> to create a bind shell giving the hacker a remote command prompt on the 
+Windows XP system.
+<br />
+<img src="https://i.imgur.com/A7tJZ9D.png" height="95%" width="95%" alt="NETCAT FOUND IN PSTREE COMD"/>
+<br />
+This provides more malicious activities such as the opportunity to create new passwords for accounts, lock 
+users out of their own system, and leave critical damage to a machine.
+<br />
+This lab has led to many different locations inside the virtual machines that I didn’t know existed before 
+attempting it. Firstly, I’m grateful for that. I utilize a majorly popular memory analysis tool to scan, connect, 
+identify, and create a story on the running processes from this memory image. The compromised machine 
+did indeed have malicious activity going on. I found a backdoor with root-like (superuser) privileges that 
+took advantage of the machine to gain access to Windows XP.
+
+<h3>References</h3>
+Balapure, Aditya. “Memory Forensics and Analysis Using Volatility.” Infosec Resources, 13 May 2021, 
+resources.infosecinstitute.com/topic/memory-forensics-and-analysis-using-volatility/.
+<br />
+<br />
+Chaturvedi, A. (2010, December 1). Playing around with HXDEF rootkit. Playing Around with HXDEF Rootkit. 
+Retrieved April 2, 2023, from http://anadisays.blogspot.com/2010/11/playing-around-with-hxdef
+rootkit.html
+<br />
+<br />
+
+Corporation, M. (n.d.). Microsoft. threat description - Microsoft Security Intelligence. Retrieved April 2, 
+2023, from https://www.microsoft.com/en-us/wdsi/threats/malware-encyclopedia
+description?Name=Backdoor%3AWin32%2FPoisonivy.I&threatId=-2147363597
+<br />
+<br />
+
+evild3ad. “Home.” evild3ad.Com, 20 Sept. 2011, evild3ad.com/956/volatility-memory-forensics-basic
+usage-for-malware-analysis/.
+<br />
+<br />
+
+eXPlorer, Hack. “How to Use Volatility - Memory Analysis for Beginners.” YouTube, 24 Jan. 2020, 
+youtu.be/eluS7_eSm8M.
+<br />
+<br />
+
+Hat, Black. “Investigating Malware Using Memory Forensics - A Practical Approach.” YouTube, 14 Jan. 2020, 
+youtu.be/BMFCdAGxVN4. 
+<br />
+<br />
+
+Linux, Kali. “Volatolity -- Digial Forensic Testing of RAM on Kali Linux.” Best Kali Linux Tutorials, 11 Dec. 
+2021, www.kalilinux.in/2021/03/volatolity-digial-forensic-testing-of.html. 
+<br />
+<br />
+
+Poisonivy. PoisonIvy, Software S0012 | MITRE ATT&CK®. (n.d.). Retrieved April 1, 2023, from 
+https://attack.mitre.org/software/S0012/ 
+<br />
+<br />
+
+Poisonivy. POISONIVY - Threat Encyclopedia. (n.d.). Retrieved April 1, 2023, from 
+https://www.trendmicro.com/vinfo/us/threat-encyclopedia/malware/poisonivy
+<br />
+<br />
+
+P4N4Rd1. “First Steps to Volatile Memory Analysis.” Medium, Medium, 13 Jan. 2019, 
+medium.com/@zemelusa/first-steps-to-volatile-memory-analysis-dcbd4d2d56a1. 
+<br />
+<br />
+
+v4L. “Hacker Defender HXDEF Rootkit Tutorial in 10 Steps [Nostalgia].” Ethical Hacking Tutorials, Tips and 
+Tricks, 18 Mar. 2014, www.hacking-tutorial.com/hacking-tutorial/hacker-defender-hxdef-rootkit
+tutorial-in-10-steps-nostalgia/#sthash.5Bs5vvB2.U7N3Sh54.dpbs.

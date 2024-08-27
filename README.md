@@ -198,6 +198,7 @@ set as a backdoor shell.
 <br />
 <img src="https://i.imgur.com/hjzE0KI.png" height="90%" width="90%" alt="STRINGS CMD ON KALI FOR HXDEF100"/>
 <br />
+<br />
 It spread itself to replace or inject itself into essential Windows processes. Then <i>hxdef100.exe</i> can inject 
 itself into batch files and other processes via Alternate Data Stream. Once a backdoor is created, the 
 hacker was able to connect back to the Windows XP machine via port forwarding through a listed open 
